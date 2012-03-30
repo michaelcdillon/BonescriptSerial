@@ -1,3 +1,4 @@
+var util = require ("util");
 var fs = require ("fs");
 var serialPort = require ("serialport");
 
@@ -39,38 +40,45 @@ var setMuxForUart = function (uart, next) {
     var txFd, rxFd;
     var txBuf = new Buffer(uart.muxTx.config, 'ascii');
     var rxBuf = new Buffer(uart.muxRx.config, 'ascii');
-    console.log ("Buffer: " + rxBuf.length + " Contents: " + rxBuf.toString ());
+    var txBytesWritten, rxBytesWritten;
 
-    console.log ("Setting up mux for " + uart.path);
+    console.log ("Configuring UART MUX for " + uart.path);
     
-    txFd = fs.openSync (MUX_PATH + uart.muxTx.path, 'a+');
-    rxFd = fs.openSync (MUX_PATH + uart.muxRx.path, 'a+');
+    txFd = fs.openSync (MUX_PATH + uart.muxTx.path, 'w');
+    rxFd = fs.openSync (MUX_PATH + uart.muxRx.path, 'w');
+
     if (txFd && rxFd) {
-        fs.write (txFd, txBuf, 0, txBuf.length, 1, function (err) {
-            if (!err) {
-                fs.closeSync (txFd);
-                fs.write (rxFd, rxBuf, 0, rxBuf.length, 1, function (err) {
-                    if (!err) {
-                        fs.closeSync (rxFd);
-                        next ();
-                    }
-                    else {
-                        fs.closeSync (rxFd);
-                        console.log ('Error Writing to file: ' + MUX_PATH + uart.muxRx.path + ' | ' + err);            
-                    }
-                });
-            }
-            else {
-                fs.closeSync (txFd);
-                console.log ('Error Writing to file: '+ MUX_PATH + uart.muxTx.path + ' | ' + err);            
-            }
-        });  
+        try {
+            txBytesWritten = fs.writeSync (txFd, txBuf, 0, txBuf.length, 0);
+        }
+        catch (e) {
+            fs.closeSync (txFd);
+            console.log ('Error Writing to file: '+ MUX_PATH + uart.muxTx.path + ' | ' + util.inspect (e));            
+            return;
+        }
+
+        try {
+            rxBytesWritten = fs.writeSync (rxFd, rxBuf, 0, rxBuf.length, 0);
+        }
+        catch (e) {
+            fs.closeSync (rxFd);
+            console.log ('Error Writing to file: ' + MUX_PATH + uart.muxRx.path + ' | ' + util.inspect(e));            
+            return;
+        }
+
+        fs.closeSync (txFd);
+        fs.closeSync (rxFd);
+
+        if (txBytesWritten && rxBytesWritten) {
+            console.log ("Uart MUX finished configuration");
+            next ();
+        }
+        else {
+            console.log ("An error occured writing to the UART MUX.");
+        }
     }
     else {
-        if (txFd)
-            fs.closeSync (txFd);
-        if (rxFd)
-            fs.closeSync (rxRd);
+        console.log ("An error occured while opening the UART MUX files.");
     }
 };
 
@@ -79,7 +87,7 @@ var port;
 var openSerialPort = function () {
 	port = new serialPort.SerialPort (UART_CONFIG.uart1.path, {
 		baudRate : 9600,
-		//parser : serialPort.parsers.raw
+		parser : serialPort.parsers.raw
 	});
 	console.log ("Serial Port setup and running...");
 	port.on ("data", function (data) {

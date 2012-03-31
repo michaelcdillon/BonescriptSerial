@@ -14,22 +14,22 @@ var MUX_PATH = "/sys/kernel/debug/omap_mux/";
 var UART_CONFIG = {
 	uart0 : {
 		muxTx : {
-			path : "uart0_txd",
+			file : "uart0_txd",
 			config : "0",
 		},
 		muxRx : {
-			path : "uart0_rxd",
+			file : "uart0_rxd",
 			config : "" + (0 | 1 << 5),
 		},
 		path : "/dev/ttyO0",
 	},
 	uart1 : {
 		muxTx : {
-			path : "uart1_txd",
+			file : "uart1_txd",
 			config : "0",
 		},
 		muxRx : {
-			path : "uart1_rxd",
+			file : "uart1_rxd",
 			config : "" + (0 | 1 << 5),
 		},
 		path : "/dev/ttyO1",	
@@ -42,10 +42,10 @@ var setMuxForUart = function (uart, next) {
     var rxBuf = new Buffer(uart.muxRx.config, 'ascii');
     var txBytesWritten, rxBytesWritten;
 
-    console.log ("Configuring UART MUX for " + uart.path);
+    console.log ("Configuring UART MUX for " + uart.file);
     
-    txFd = fs.openSync (MUX_PATH + uart.muxTx.path, 'w');
-    rxFd = fs.openSync (MUX_PATH + uart.muxRx.path, 'w');
+    txFd = fs.openSync (MUX_PATH + uart.muxTx.file, 'w');
+    rxFd = fs.openSync (MUX_PATH + uart.muxRx.file, 'w');
 
     if (txFd && rxFd) {
         try {
@@ -54,7 +54,7 @@ var setMuxForUart = function (uart, next) {
         catch (e) {
             fs.closeSync (txFd);
             fs.closeSync (rxFd);
-            console.log ('Error Writing to file: '+ MUX_PATH + uart.muxTx.path + ' | ' + util.inspect (e));            
+            console.log ('Error Writing to file: '+ MUX_PATH + uart.muxTx.file + ' | ' + util.inspect (e));            
             return;
         }
 
@@ -64,7 +64,7 @@ var setMuxForUart = function (uart, next) {
         catch (e) {
             fs.closeSync (txFd);
             fs.closeSync (rxFd);
-            console.log ('Error Writing to file: ' + MUX_PATH + uart.muxRx.path + ' | ' + util.inspect(e));            
+            console.log ('Error Writing to file: ' + MUX_PATH + uart.muxRx.file + ' | ' + util.inspect(e));            
             return;
         }
 
@@ -102,7 +102,7 @@ var openSerialPort = function () {
 };
 
 
-console.log ("Opening Serial Port for: " + UART_CONFIG.uart1.path);
+console.log ("Opening Serial Port for: " + UART_CONFIG.uart1.file);
 setMuxForUart (UART_CONFIG.uart1, function () {
     console.log ("Uart mux setup finished");
     openSerialPort ();
